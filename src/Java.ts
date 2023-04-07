@@ -7,7 +7,8 @@ import { EventEmitter } from 'events'
 
 declare module 'java' {
   export interface NodeAPI {
-    callStaticMethodAsync (className: string, methodName: string, ...args: any[]): Promise<any>
+    newInstanceAsync (className: string, ...args: any[]): Promise<any>;
+    callStaticMethodAsync (className: string, methodName: string, ...args: any[]): Promise<any>;
   }
 }
 

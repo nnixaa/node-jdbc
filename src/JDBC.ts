@@ -1,5 +1,5 @@
 import * as debug from 'debug'
-import * as Promise from 'bluebird'
+import * as BluebirdPromise from 'bluebird'
 
 import { isEmpty } from 'lodash'
 import { Connection, IConnection } from './Connection'
@@ -13,8 +13,10 @@ export interface IJDBCConfig {
   password?: string
 }
 
+const registeredDrivers: Map<string, any> = new Map();
+
 export class JDBC {
-  private connection: Promise<Connection>
+  private connection: BluebirdPromise<Connection>
   private config: IJDBCConfig
 
   private debug: debug.IDebugger = debug('@naxmefy/jdbc')
@@ -23,10 +25,17 @@ export class JDBC {
     this.config = config
     this.validateConfig()
     this.debug('setup jdbc instance for', this.config.className)
-    this.registerDriver()
   }
 
-  getConnection (connectIfClosed?: boolean): Promise<Connection> {
+  async init(): Promise<any> {
+    if (!registeredDrivers.has(this.config.className)) {
+      this.debug('setup jdbc instance for', this.config.className);
+      const driver: any = await this.classForName();
+      await this.registerDriver(driver);
+    }
+  }
+
+  getConnection (connectIfClosed?: boolean): BluebirdPromise<Connection> {
     if (!this.connection) {
       return this.connection = this.newConnection()
     }
@@ -40,7 +49,7 @@ export class JDBC {
     })
   }
 
-  createStatement (connectIfClosed?: boolean): Promise<Statement> {
+  createStatement (connectIfClosed?: boolean): BluebirdPromise<Statement> {
     return this.getConnection(connectIfClosed)
       .then((connection: Connection) => connection.createStatement())
   }
@@ -51,18 +60,17 @@ export class JDBC {
     }
   }
 
-  private classForName (): any {
+  private classForName (): Promise<any> {
     this.debug('generate new java instance for driver', this.config.className)
-    return Java.getInstance().java.newInstanceSync(this.config.className)
+    return Java.getInstance().java.newInstanceAsync(this.config.className)
   }
 
-  private registerDriver (): any {
-    const driver = this.classForName()
+  private registerDriver (driver: any): Promise<any> {
     this.debug('register jdbc driver', this.config.className)
-    return Java.getInstance().java.callStaticMethodSync('java.sql.DriverManager', 'registerDriver', driver)
+    return Java.getInstance().java.callStaticMethodAsync('java.sql.DriverManager', 'registerDriver', driver)
   }
 
-  private newConnection (): Promise<Connection> {
+  private newConnection (): BluebirdPromise<Connection> {
     return Java.getInstance().java.callStaticMethodAsync(
       'java.sql.DriverManager',
       'getConnection',
