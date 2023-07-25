@@ -53,6 +53,10 @@ export class ResultSet {
           const dateValue = this.resultSet[`${getterName}`](meta.label)
           result[meta.label] = dateValue ? _.toString(dateValue) : null
           break
+        case meta.type.name === 'BigDecimal':
+          const bigDecimalValue = this.resultSet[`${getterName}`](meta.label);
+          result[meta.label] = bigDecimalValue ? bigDecimalValue.doubleValueSync() : null;
+          break
         case meta.type.name === 'Int' && _.isNull(this.resultSet.getObjectSync(meta.label)):
           result[meta.label] = null
           break
